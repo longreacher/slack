@@ -35,4 +35,4 @@ jobs:
           git diff --staged --quiet || git commit -m "Update index.html with latest tide data"
           # Pull any remote changes and stitch our new commit seamlessly onto the end
           git pull --rebase origin main
-          git push -f origin main
+          git push

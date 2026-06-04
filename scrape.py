@@ -39,9 +39,9 @@ def main():
 
     if next_event:
         # Check if direction is 1 (Outward) or 0 (Inward)
-        if "1" in direction:
+        if "0" in direction:
             run_text = "End of outward run"
-        elif "0" in direction:
+        elif "1" in direction:
             run_text = "End of inward run"
         else:
             run_text = "Unknown direction"

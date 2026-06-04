@@ -54,18 +54,18 @@ def main():
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Next Tide Event - Reversing Falls</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding-top: 10vh; background-color: #f4f4f9; color: #333; }}
-        .container {{ background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding-top: 10vh; background-color: white; color: #333; }}
+        .container {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }}
         h1 {{ margin-top: 0; font-size: 1.5rem; color: #555; }}
-        .event {{ font-size: 2.5rem; font-weight: bold; color: #0056b3; margin: 20px 0; }}
+        .event {{ font-size: 2.5rem; font-weight: bold; color: #0056b3; margin: 10px 0; }}
         .time {{ font-size: 1.5rem; color: #666; }}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Next Event at Reversing Falls (00066)</h1>
-        <div class="event">{run_text}</div>
-        <div class="time">{next_event.strftime('%B %d, %Y at %I:%M %p')}</div>
+        <h1>Next Slack Water at Reversing Falls</h1>
+        <div class="event">{next_event.strftime('%B %d, %Y at %I:%M %p')}</div>
+        <div class="time">{run_text}</div>
     </div>
 </body>
 </html>"""

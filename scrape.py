@@ -38,7 +38,7 @@ def main():
                 continue
 
     if next_event:
-        # Check if direction is 1 (Outward) or 0 (Inward)
+        # Check if direction is 0 (Outward) or 1 (Inward)
         if "0" in direction:
             run_text = "End of outward run"
         elif "1" in direction:

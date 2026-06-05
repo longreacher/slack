@@ -1,96 +1,90 @@
-import sys
 import os
-from datetime import datetime
-import pytz
+from datetime import datetime, date, timedelta
 
-def main():
-    # Target file name in your repo
-    data_file = "tides_2026.txt"
-    
-    if not os.path.exists(data_file):
-        print(f"⚠️ Local database file {data_file} missing from repository context.")
-        sys.exit(0)
+def load_tide_data(filepath="tides_2026.txt"):
+    """
+    Reads the formatted tide data from the text file.
+    Returns a list of tuples: (datetime_obj, direction_code)
+    """
+    tide_events = []
+    if not os.path.exists(filepath):
+        print(f"Error: {filepath} not found. Please ensure the file exists.")
+        return tide_events
+        
+    with open(filepath, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                datetime_str, code_str = line.split()
+                dt = datetime.fromisoformat(datetime_str)
+                code = int(code_str)
+                tide_events.append((dt, code))
+            except ValueError:
+                # Skip any lines that don't match the expected format
+                continue
+    return tide_events
 
-    # Setup local New Brunswick time context
-    tz = pytz.timezone('America/Halifax')
-    now = datetime.now(tz).replace(tzinfo=None)
-
-    upcoming_events = []
-
-    print(f"📥 Loading local database footprint... Current local time: {now}")
-    
-    with open(data_file, "r") as f:
-        lines = f.readlines()
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-            
-        try:
-            # Parse the format: YYYY-MM-DDTHH:MM:SS DIRECTION_CODE
-            date_str, dir_str = line.split()
-            event_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-            
-            # Check if this prediction is ahead of our current clock boundary
-            if event_time > now:
-                if "0" in dir_str:
-                    run_text = "End of inward run"
-                elif "1" in dir_str:
-                    run_text = "End of outward run"
-                else:
-                    run_text = "Slack Water"
-                    
-                upcoming_events.append({
-                    "time": event_time,
-                    "run_text": run_text
-                })
-                
-                # Stop processing once we collect the next two matching slacks
-                if len(upcoming_events) == 2:
-                    break
-        except Exception as e:
-            continue
-
-    if upcoming_events:
-        # Build the dynamic HTML element blocks
-        list_items_html = ""
-        for event in upcoming_events:
-            # %-d removes the leading zero on the day (e.g., "June 5" instead of "June 05")
-            date_display = event["time"].strftime('%B %-d')
-            time_display = event["time"].strftime('%-I:%M %p')
-            run_display = event["run_text"]
-            
-            list_items_html += f"        <div class='event-row'><strong>{date_display}</strong> at {time_display} — <em>{run_display}</em></div>\n"
-
-        # Construct your preferred layout template
-        html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Next Tide Events - Reversing Falls</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding-top: 5vh; background-color: white; color: #333; }}
-        .container {{ background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; text-align: center; }}
-        h1 {{ margin-top: 0; font-size: 1.4rem; color: #444; border-bottom: 2px solid #eeec; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }}
-        .event-row {{ font-size: 1.25rem; color: #0056b3; margin: 12px 0; line-height: 1.4; text-align: center; }}
-        .event-row strong {{ color: #111; }}
-        .event-row em {{ color: #555; font-style: normal; font-weight: 500; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Upcoming Slack Water at Reversing Falls</h1>
-{list_items_html}    </div>
-</body>
-</html>"""
-
-        with open("index.html", "w") as f:
-            f.write(html_content)
-        print(f"🎉 Success! Locally verified index.html updated with {len(upcoming_events)} events.")
+def get_day_label(event_date, target_date=None):
+    """
+    Returns 'Today', 'Tomorrow', or a formatted date string relative to target_date.
+    """
+    if target_date is None:
+        target_date = date.today()
+        
+    if event_date == target_date:
+        return "Today"
+    elif event_date == target_date + timedelta(days=1):
+        return "Tomorrow"
     else:
-        print("⚠️ Database processed completely, but no upcoming events found in data window.")
+        # Formats future dates beautifully (e.g., "Monday, Sep 07")
+        return event_date.strftime("%A, %b %d")
+
+def display_tide_schedule(filepath="tides_2026.txt", show_all=False):
+    """
+    Parses and displays the tide schedule with dynamic 'Today' and 'Tomorrow' labels.
+    """
+    tide_events = load_tide_data(filepath)
+    if not tide_events:
+        return
+
+    # Mapping codes to descriptive labels as specified by your repository rules
+    status_mapping = {
+        1: "End of outward run",
+        0: "End of inward run"
+    }
+
+    current_dt = datetime.now()
+    current_date = current_dt.date()
+
+    print("=" * 65)
+    print(f" REVERSING FALLS TIDE SCHEDULE (Generated on {current_dt.strftime('%Y-%m-%d %I:%M %p')})")
+    print("=" * 65)
+
+    upcoming_marked = False
+    for dt, code in tide_events:
+        event_date = dt.date()
+        
+        # By default, skip past dates to keep the console layout uncluttered
+        if not show_all and event_date < current_date:
+            continue
+            
+        day_label = get_day_label(event_date, current_date)
+        time_str = dt.strftime("%I:%M %p")
+        status_str = status_mapping.get(code, "Unknown status")
+        
+        # Place an arrow (->) next to the very next upcoming event
+        prefix = "  "
+        if not show_all and dt >= current_dt and not upcoming_marked:
+            prefix = "-> "
+            upcoming_marked = True
+            
+        print(f"{prefix}{day_label:<18} at {time_str:<8} | {status_str}")
+    print("=" * 65)
 
 if __name__ == "__main__":
-    main()
+    # Settings:
+    # Set show_all=False to print only current & future tides (clean display)
+    # Set show_all=True to output every row contained in tides_2026.txt
+    display_tide_schedule("tides_2026.txt", show_all=False)

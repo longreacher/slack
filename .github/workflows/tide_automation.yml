@@ -1,0 +1,25 @@
+name: Event-Driven Tide Automation
+
+on:
+  schedule:
+    # Automatically scheduled target times for tomorrow:
+    - cron: '41 2 * * *'
+    - cron: '36 8 * * *'
+    - cron: '6 15 * * *'
+    - cron: '0 21 * * *'
+  workflow_dispatch: # Allows manual testing via the GitHub Actions dashboard
+
+jobs:
+  execute_automation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run Scraping Script
+      run: python scrape.py

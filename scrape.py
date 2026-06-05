@@ -1,81 +1,93 @@
 import sys
+from datetime import datetime, timedelta
 import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
 import pytz
 
-# We append a free, public Scraper proxy prefix to the URL. 
-# This shifts the request away from GitHub's blocked IP block so the page loads instantly.
-url = "https://api.allorigins.win/get?url=" + requests.utils.quote("https://tides.gc.ca/en/stations/00066/predictions/annual")
+# Official Government OGC Geospatial API endpoint for Station 00066 (Saint John / Reversing Falls)
+# This handles automated background cloud requests instantly without firewalls or proxies.
+URL = "https://geoweb-api.dfo-mpo.gc.ca/api/features/collections/predictions-currents/items"
+PARAMS = {
+    "id-station": "00066",
+    "limit": "50",  # Pull enough rows to safely capture the next 48 hours
+    "sortby": "date-heure-event"
+}
 
 def main():
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    
     try:
-        print("📥 Fetching page contents via proxy tunnel...")
-        response = requests.get(url, headers=headers, timeout=15)
+        print("📥 Fetching clean dataset from official DFO Geospatial API...")
+        response = requests.get(URL, headers=headers, params=PARAMS, timeout=15)
         response.raise_for_status()
-        
-        # AllOrigins wraps the page in a JSON object under the key 'contents'
         json_data = response.json()
-        html_raw = json_data.get("contents", "")
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ Proxy connection hurdle: {e}")
-        sys.exit(0) # Exit cleanly to avoid workflow alerts
+        print(f"⚠️ API connection hurdle: {e}")
+        sys.exit(0) # Exit cleanly to avoid workflow build errors
 
-    # Feed the raw HTML into BeautifulSoup
-    soup = BeautifulSoup(html_raw, 'html.parser')
-
-    # The station is in New Brunswick, which uses Atlantic Time (AST/ADT)
+    # Setup local New Brunswick time context
     tz = pytz.timezone('America/Halifax')
-    now = datetime.now(tz).replace(tzinfo=None)
+    now = datetime.now(tz)
 
     upcoming_events = []
+    features = json_data.get("features", [])
+    print(f"📋 Received data grid. Processing {len(features)} data features...")
 
-    # Parse table rows for the data exactly like your original working code
-    rows = soup.find_all('tr')
-    print(f"📋 Received data. Processing {len(rows)} table elements...")
-
-    for tr in rows:
-        tds = tr.find_all('td')
-        if len(tds) >= 2:
-            date_str = tds[0].get_text(strip=True)
-            dir_str = tds[1].get_text(strip=True)
+    for feature in features:
+        props = feature.get("properties", {})
+        event_str = props.get("date-heure-event")       # e.g., "2026-06-05T17:51:00Z"
+        status_code = str(props.get("code-status", "")) # Matches your 0 or 1 mapping
+        
+        if not event_str:
+            continue
             
-            try:
-                # Parse times structured like '2026-06-04T15:03:00'
-                event_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-                
-                # Check if this event happens in the future
-                if event_time > now:
-                    if "0" in dir_str:
-                        run_text = "End of outward run"
-                    elif "1" in dir_str:
-                        run_text = "End of inward run"
+        try:
+            # Parse the API's standard ISO string as UTC, then translate to Atlantic time
+            utc_time = datetime.strptime(event_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.utc)
+            event_time = utc_time.astimezone(tz)
+            
+            # Filter for events happening in the future
+            if event_time > now:
+                # 0 = End of inward run (turning to ebb)
+                # 1 = End of outward run (turning to flood)
+                if "0" in status_code:
+                    run_text = "End of inward run"
+                elif "1" in status_code:
+                    run_text = "End of outward run"
+                else:
+                    # Fallback check on text description if status code changes
+                    desc = props.get("description-evenement-en", "").lower()
+                    if "slack" in desc:
+                        if "ebb" in desc:
+                            run_text = "End of inward run"
+                        elif "flood" in desc:
+                            run_text = "End of outward run"
+                        else:
+                            run_text = "Slack Water"
                     else:
-                        run_text = "Slack Water"
-                        
-                    upcoming_events.append({
-                        "time": event_time,
-                        "run_text": run_text
-                    })
-                    
-                    # Stop searching once we have isolated the next 2 events
-                    if len(upcoming_events) == 2:
-                        break
-            except ValueError:
-                continue
+                        continue # Skip non-slack entries (like maximum flow entries)
 
-    if upcoming_events:
-        # Build the dynamic list elements inside the HTML
+                upcoming_events.append({
+                    "time": event_time,
+                    "run_text": run_text
+                })
+        except Exception:
+            continue
+
+    # Ensure everything is in perfect chronological order and isolate the top two
+    upcoming_events.sort(key=lambda x: x["time"])
+    next_two = upcoming_events[:2]
+
+    if next_two:
+        # Build the dynamic list rows inside the HTML template
         list_items_html = ""
-        for event in upcoming_events:
+        for event in next_two:
             date_display = event["time"].strftime('%B %d')
             time_display = event["time"].strftime('%-I:%M %p') # Strips leading zero on Linux
             run_display = event["run_text"]
             
             list_items_html += f"        <div class='event-row'><strong>{date_display}</strong> at {time_display} — <em>{run_display}</em></div>\n"
 
-        # Generate your pristine HTML page template
+        # Generate your identical clean HTML layout
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,9 +112,9 @@ def main():
 
         with open("index.html", "w") as f:
             f.write(html_content)
-        print(f"✅ Successfully updated index.html with {len(upcoming_events)} events via proxy tunnel!")
+        print(f"🎉 Success! Generated index.html with {len(next_two)} tracking events via OGC API.")
     else:
-        print("⚠️ Reached table but could not find future rows inside current window.")
+        print("⚠️ Could not locate any upcoming slack events inside the API payload window.")
 
 if __name__ == "__main__":
     main()

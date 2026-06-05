@@ -6,9 +6,10 @@ on:
     - cron: '30 23 * * *'
   workflow_dispatch: # Allows you to manually trigger it via GitHub to test
 
-# Root permissions block (this is where GitHub expects both tokens)
+# Root permissions block with all three required scopes explicitly defined
 permissions:
   contents: write
+  actions: write
   workflows: write
 
 jobs:

@@ -1,26 +1,42 @@
 import sys
+import time  # Added for the pause between retries
 from datetime import datetime
 import requests
 import pytz
 
-# Official Government API endpoint for Saint John / Reversing Falls (Station 00066)
-# This API handles server-to-server requests without blocking GitHub Actions
 URL = "https://api-tides.gc.ca/v1/stations/00066/data?heights-or-currents=currents&time-zone=UTC"
 
 def main():
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
     
-    try:
-        response = requests.get(URL, headers=headers, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"⚠️ API Connection issue: {e}")
-        sys.exit(0)
+    # --- RETRY LOOP START ---
+    max_retries = 3
+    retry_delay = 30  # seconds
+    response = None
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"📥 Fetching API data (Attempt {attempt + 1} of {max_retries})...")
+            response = requests.get(URL, headers=headers, timeout=15)
+            response.raise_for_status()
+            data = response.json()
+            print("✅ Data successfully retrieved.")
+            break  # Break out of the loop if successful
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ Attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                print(f"Waiting {retry_delay} seconds before trying again...")
+                time.sleep(retry_delay)
+            else:
+                print("❌ All retry attempts failed. Exiting gracefully.")
+                sys.exit(0) # Exit cleanly so GitHub Actions doesn't send failure alerts
+    # --- RETRY LOOP END ---
 
     # Setup the local New Brunswick time context
     tz = pytz.timezone('America/Halifax')
     now = datetime.now(tz)
+    
+    # ... the rest of your script remains exactly the same ...
 
     upcoming_events = []
 

@@ -9,10 +9,9 @@ on:
 jobs:
   build_schedule:
     runs-on: ubuntu-latest
-    permissions:
-     contents: write   # Allows reading and committing code changes
-      workflows: write  # Crucial! Allows updating files inside .github/workflows/
-      
+  permissions:
+      contents: write
+      workflows: write # Fixed: Grants permission to modify workflow YAML files      
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4

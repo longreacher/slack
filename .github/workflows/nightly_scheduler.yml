@@ -1,0 +1,31 @@
+name: Nightly Tide Scheduler Creator
+
+on:
+  schedule:
+    # Runs once a day at 11:30 PM (23:30 UTC) to prepare tomorrow's triggers
+    - cron: '30 23 * * *'
+  workflow_dispatch: # Allows you to manually trigger it via GitHub to test
+
+jobs:
+  build_schedule:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Crucial permission allowing GitHub to commit the changes back
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Generate Tomorrow's Workflow
+      run: python generate_workflow.py
+
+    - name: Commit and Push Updated Workflow
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Automated Update: Scheduled tomorrow's precision slack triggers"
+        file_pattern: '.github/workflows/tide_automation.yml'

@@ -6,12 +6,14 @@ on:
     - cron: '30 23 * * *'
   workflow_dispatch: # Allows you to manually trigger it via GitHub to test
 
+# Root permissions block (this is where GitHub expects both tokens)
+permissions:
+  contents: write
+  workflows: write
+
 jobs:
   build_schedule:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      workflows: write # Fixed: Grants permission to modify workflow YAML files
 
     steps:
     - name: Checkout Repository

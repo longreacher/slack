@@ -14,7 +14,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.AUTOMATION_TOKEN }} # Authenticates the initial pull/checkout
+        token: ${{ secrets.AUTOMATION_TOKEN }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -24,12 +24,21 @@ jobs:
     - name: Generate Tomorrow's Workflow
       run: python generate_workflow.py
 
-    - name: Commit and Push Updated Workflow
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        branch: main # Explicitly targets your default branch
-        commit_message: "Automated Update: Scheduled tomorrow's precision slack triggers"
-        file_pattern: '.github/workflows/tide_automation.yml'
-        repository: .
-      env:
-        GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }} # Crucial! Tells the git push command to use your token instead of the default bot
+    - name: Commit and Push Dynamically
+      run: |
+        # Configure Git bot identity for the commit history
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        # Stage the dynamically created file
+        git add .github/workflows/tide_automation.yml
+        
+        # Only commit and push if the file actually changed
+        if ! git diff --cached --quiet; then
+          git commit -m "Automated Update: Scheduled tomorrow's precision slack triggers"
+          
+          # Force the push using your Personal Access Token injected into the remote URL
+          git push https://x-access-token:${{ secrets.AUTOMATION_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+        else
+          echo "No changes detected in the tide schedule for tomorrow. Skipping push."
+        fi

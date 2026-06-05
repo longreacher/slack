@@ -9,26 +9,39 @@ import dateutil.parser
 URL = "https://tides.gc.ca/en/stations/66"
 
 def parse_tide_data(soup):
-    now = datetime.now().astimezone() # Local time with timezone
+    # 1. Force the evaluation to use local Atlantic time context
+    now = datetime.now().astimezone() 
     rows = soup.find_all('tr')
     
     slack_events = []
     
+    print(f"DEBUG: System 'now' time evaluated as: {now}")
+    print(f"DEBUG: Found {len(rows)} total rows in the page table.")
+
     for row in rows:
         text = row.get_text()
-        # Filter for rows that indicate slack water (0.0 speed or explicitly labeled)
-        if "Slack" in text or "0.0" in text:
-            cells = row.find_all('td')
+        row_context = text.lower()
+        
+        # Broaden the string match to capture variations of 'slack' or turning points
+        if "slack" in row_context or "0.0" in row_context or "turn" in row_context:
+            cells = row.find_all(['td', 'th'])
             if len(cells) >= 2:
                 try:
-                    time_str = cells[0].get_text().strip()
+                    # Look for a clean machine-readable time attribute first, fall back to text
+                    time_cell = cells[0]
+                    time_str = time_cell.get('data-iso') or time_cell.get_text().strip()
+                    
                     event_time = dateutil.parser.parse(time_str)
                     
-                    # Only grab future slack waters
+                    # Ensure event_time has a timezone attached so the comparison doesn't break
+                    if event_time.tzinfo is None:
+                        event_time = event_time.replace(tzinfo=now.tzinfo)
+                    
+                    # Log what we found to the GitHub Action output log
+                    print(f"DEBUG: Found Slack Event at {event_time} | Context: {text.strip()}")
+
+                    # Keep it if it's in the future
                     if event_time > now:
-                        row_context = text.lower()
-                        
-                        # Determine run direction based on text context
                         if "flood" in row_context or "inward" in row_context:
                             direction = "End of outward run"
                         elif "ebb" in row_context or "outward" in row_context:
@@ -40,11 +53,13 @@ def parse_tide_data(soup):
                             "time": event_time,
                             "direction": direction
                         })
-                except Exception:
+                except Exception as e:
+                    print(f"DEBUG: Failed parsing row row due to: {e}")
                     continue
 
     # Sort chronologically and isolate the next two closest events
     slack_events.sort(key=lambda x: x["time"])
+    print(f"DEBUG: Total upcoming events filtered: {len(slack_events)}")
     return slack_events[:2]
 
 def main():

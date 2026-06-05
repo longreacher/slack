@@ -9,9 +9,10 @@ on:
 jobs:
   build_schedule:
     runs-on: ubuntu-latest
-  permissions:
+    permissions:
       contents: write
-      workflows: write # Fixed: Grants permission to modify workflow YAML files      
+      workflows: write # Fixed: Grants permission to modify workflow YAML files
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4

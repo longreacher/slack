@@ -1,80 +1,92 @@
+import sys
+import json
+from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
-import pytz
+import dateutil.parser
 
-url = "https://tides.gc.ca/en/stations/00066/predictions/annual"
+# Station 66 URL (Saint John / Reversing Falls data)
+URL = "https://tides.gc.ca/en/stations/66"
+
+def parse_tide_data(soup):
+    now = datetime.now().astimezone() # Local time with timezone
+    rows = soup.find_all('tr')
+    
+    slack_events = []
+    
+    for row in rows:
+        text = row.get_text()
+        # Filter for rows that indicate slack water (0.0 speed or explicitly labeled)
+        if "Slack" in text or "0.0" in text:
+            cells = row.find_all('td')
+            if len(cells) >= 2:
+                try:
+                    time_str = cells[0].get_text().strip()
+                    event_time = dateutil.parser.parse(time_str)
+                    
+                    # Only grab future slack waters
+                    if event_time > now:
+                        row_context = text.lower()
+                        
+                        # Determine run direction based on text context
+                        if "flood" in row_context or "inward" in row_context:
+                            direction = "End of outward run"
+                        elif "ebb" in row_context or "outward" in row_context:
+                            direction = "End of inward run"
+                        else:
+                            direction = "Slack Water"
+
+                        slack_events.append({
+                            "time": event_time,
+                            "direction": direction
+                        })
+                except Exception:
+                    continue
+
+    # Sort chronologically and isolate the next two closest events
+    slack_events.sort(key=lambda x: x["time"])
+    return slack_events[:2]
 
 def main():
-    # Fetch the page
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    response = requests.get(url, headers=headers)
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    
+    try:
+        # Added explicit 10-second timeout to handle server hangs gracefully
+        response = requests.get(URL, headers=headers, timeout=10)
+        response.raise_for_status() 
+        
+    except (requests.exceptions.ConnectTimeout, requests.exceptions.Timeout):
+        print("⚠️ Connection timed out while reaching tides.gc.ca. Server may be down for maintenance.")
+        sys.exit(0) # Exit cleanly so GitHub Actions doesn't trigger a build failure
+        
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ A network error occurred: {e}")
+        sys.exit(0)
+
+    # Parse the HTML page
     soup = BeautifulSoup(response.text, 'html.parser')
-
-    # The station is in New Brunswick, which uses Atlantic Time (AST/ADT)
-    tz = pytz.timezone('America/Halifax')
-    now = datetime.now(tz).replace(tzinfo=None)
-
-    next_event = None
-    direction = None
-
-    # Parse table rows for the data
-    for tr in soup.find_all('tr'):
-        tds = tr.find_all('td')
-        if len(tds) >= 2:
-            date_str = tds[0].get_text(strip=True)
-            dir_str = tds[1].get_text(strip=True)
-            
-            try:
-                # Parse times structured like '2026-06-04T15:03:00'
-                event_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-                
-                # Find the very first event that is greater than the current time
-                if event_time > now:
-                    next_event = event_time
-                    direction = dir_str
-                    break
-            except ValueError:
-                continue
-
-    if next_event:
-        # Check if direction is 0 (Outward) or 1 (Inward)
-        if "0" in direction:
-            run_text = "End of outward run"
-        elif "1" in direction:
-            run_text = "End of inward run"
-        else:
-            run_text = "Unknown direction"
-
-        # Generate the HTML page
-        html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Next Tide Event - Reversing Falls</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding-top: 10vh; background-color: white; color: #333; }}
-        .container {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; }}
-        h1 {{ margin-top: 0; font-size: 1.5rem; color: #555; }}
-        .event {{ font-size: 2.5rem; font-weight: bold; color: #0056b3; margin: 10px 0; }}
-        .time {{ font-size: 1.5rem; color: #666; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Next Slack Water at Reversing Falls</h1>
-        <div class="event">{next_event.strftime('%B %d, %Y at %I:%M %p')}</div>
-        <div class="time">{run_text}</div>
-    </div>
-</body>
-</html>"""
-
-        with open("index.html", "w") as f:
-            f.write(html_content)
-        print(f"Successfully generated index.html: {run_text} at {next_event}")
+    next_slacks = parse_tide_data(soup)
+    
+    # Build the HTML Block
+    if not next_slacks:
+        html_content = "<p>No upcoming slack water data found for today.</p>"
     else:
-        print("Could not find a future event.")
+        html_content = "<h3>Upcoming Slack Water at Reversing Falls</h3>\n<ul style='list-style: none; padding: 0;'>\n"
+        for slack in next_slacks:
+            date_str = slack["time"].strftime("%B %d, %Y")
+            
+            # Linux-compatible '-%I' strips the leading zero (e.g., 1:15 PM instead of 01:15 PM)
+            time_str = slack["time"].strftime("%-I:%M %p")
+            direction_str = slack["direction"]
+            
+            html_content += f"  <li style='margin-bottom: 10px; font-size: 18px;'><strong>{date_str}</strong> at {time_str} - <em>{direction_str}</em></li>\n"
+        html_content += "</ul>"
+        
+    # Write output to index.html for your GitHub Pages deployment
+    with open("index.html", "w") as f:
+        f.write(html_content)
+        
+    print("✅ index.html updated successfully with the next two slack tides.")
 
 if __name__ == "__main__":
     main()

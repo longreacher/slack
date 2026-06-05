@@ -1,93 +1,69 @@
 import sys
-from datetime import datetime, timedelta
-import requests
+import os
+from datetime import datetime
 import pytz
 
-# Official Government OGC Geospatial API endpoint for Station 00066 (Saint John / Reversing Falls)
-# This handles automated background cloud requests instantly without firewalls or proxies.
-URL = "https://geoweb-api.dfo-mpo.gc.ca/api/features/collections/predictions-currents/items"
-PARAMS = {
-    "id-station": "00066",
-    "limit": "50",  # Pull enough rows to safely capture the next 48 hours
-    "sortby": "date-heure-event"
-}
-
 def main():
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    # Target file name in your repo
+    data_file = "tides_2026.txt"
     
-    try:
-        print("📥 Fetching clean dataset from official DFO Geospatial API...")
-        response = requests.get(URL, headers=headers, params=PARAMS, timeout=15)
-        response.raise_for_status()
-        json_data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"⚠️ API connection hurdle: {e}")
-        sys.exit(0) # Exit cleanly to avoid workflow build errors
+    if not os.path.exists(data_file):
+        print(f"⚠️ Local database file {data_file} missing from repository context.")
+        sys.exit(0)
 
     # Setup local New Brunswick time context
     tz = pytz.timezone('America/Halifax')
-    now = datetime.now(tz)
+    # Match your original format tracking setup
+    now = datetime.now(tz).replace(tzinfo=None)
 
     upcoming_events = []
-    features = json_data.get("features", [])
-    print(f"📋 Received data grid. Processing {len(features)} data features...")
 
-    for feature in features:
-        props = feature.get("properties", {})
-        event_str = props.get("date-heure-event")       # e.g., "2026-06-05T17:51:00Z"
-        status_code = str(props.get("code-status", "")) # Matches your 0 or 1 mapping
-        
-        if not event_str:
+    print(f"📥 Loading local database footprint... Current local time: {now}")
+    
+    with open(data_file, "r") as f:
+        lines = f.readlines()
+
+    for line in lines:
+        line = line.strip()
+        if not line:
             continue
             
         try:
-            # Parse the API's standard ISO string as UTC, then translate to Atlantic time
-            utc_time = datetime.strptime(event_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=pytz.utc)
-            event_time = utc_time.astimezone(tz)
+            # Parse the format: YYYY-MM-DDTHH:MM:SS DIRECTION_CODE
+            date_str, dir_str = line.split()
+            event_time = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
             
-            # Filter for events happening in the future
+            # Check if this prediction is ahead of our current clock boundary
             if event_time > now:
-                # 0 = End of inward run (turning to ebb)
-                # 1 = End of outward run (turning to flood)
-                if "0" in status_code:
+                if "0" in dir_str:
                     run_text = "End of inward run"
-                elif "1" in status_code:
+                elif "1" in dir_str:
                     run_text = "End of outward run"
                 else:
-                    # Fallback check on text description if status code changes
-                    desc = props.get("description-evenement-en", "").lower()
-                    if "slack" in desc:
-                        if "ebb" in desc:
-                            run_text = "End of inward run"
-                        elif "flood" in desc:
-                            run_text = "End of outward run"
-                        else:
-                            run_text = "Slack Water"
-                    else:
-                        continue # Skip non-slack entries (like maximum flow entries)
-
+                    run_text = "Slack Water"
+                    
                 upcoming_events.append({
                     "time": event_time,
                     "run_text": run_text
                 })
-        except Exception:
+                
+                # Stop processing once we collect the next two matching slacks
+                if len(upcoming_events) == 2:
+                    break
+        except Exception as e:
             continue
 
-    # Ensure everything is in perfect chronological order and isolate the top two
-    upcoming_events.sort(key=lambda x: x["time"])
-    next_two = upcoming_events[:2]
-
-    if next_two:
-        # Build the dynamic list rows inside the HTML template
+    if upcoming_events:
+        # Build the dynamic HTML element blocks
         list_items_html = ""
-        for event in next_two:
+        for event in upcoming_events:
             date_display = event["time"].strftime('%B %d')
-            time_display = event["time"].strftime('%-I:%M %p') # Strips leading zero on Linux
+            time_display = event["time"].strftime('%-I:%M %p') # Cleans leading zero out on Linux
             run_display = event["run_text"]
             
             list_items_html += f"        <div class='event-row'><strong>{date_display}</strong> at {time_display} — <em>{run_display}</em></div>\n"
 
-        # Generate your identical clean HTML layout
+        # Construct your preferred layout template
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -112,9 +88,9 @@ def main():
 
         with open("index.html", "w") as f:
             f.write(html_content)
-        print(f"🎉 Success! Generated index.html with {len(next_two)} tracking events via OGC API.")
+        print(f"🎉 Success! Locally verified index.html updated with {len(upcoming_events)} events.")
     else:
-        print("⚠️ Could not locate any upcoming slack events inside the API payload window.")
+        print("⚠️ Database processed completely, but no upcoming events found in data window.")
 
 if __name__ == "__main__":
     main()

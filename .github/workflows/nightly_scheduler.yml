@@ -6,12 +6,6 @@ on:
     - cron: '30 23 * * *'
   workflow_dispatch: # Allows you to manually trigger it via GitHub to test
 
-# Root permissions block with all three required scopes explicitly defined
-permissions:
-  contents: write
-  actions: write
-  workflows: write
-
 jobs:
   build_schedule:
     runs-on: ubuntu-latest
@@ -19,6 +13,8 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.AUTOMATION_TOKEN }} # Uses your token to authenticate the checkout
 
     - name: Set up Python
       uses: actions/setup-python@v5

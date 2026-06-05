@@ -13,7 +13,6 @@ def main():
 
     # Setup local New Brunswick time context
     tz = pytz.timezone('America/Halifax')
-    # Match your original format tracking setup
     now = datetime.now(tz).replace(tzinfo=None)
 
     upcoming_events = []
@@ -57,8 +56,9 @@ def main():
         # Build the dynamic HTML element blocks
         list_items_html = ""
         for event in upcoming_events:
-            date_display = event["time"].strftime('%B %d')
-            time_display = event["time"].strftime('%-I:%M %p') # Cleans leading zero out on Linux
+            # %-d removes the leading zero on the day (e.g., "June 5" instead of "June 05")
+            date_display = event["time"].strftime('%B %-d')
+            time_display = event["time"].strftime('%-I:%M %p')
             run_display = event["run_text"]
             
             list_items_html += f"        <div class='event-row'><strong>{date_display}</strong> at {time_display} — <em>{run_display}</em></div>\n"
@@ -72,9 +72,9 @@ def main():
     <title>Next Tide Events - Reversing Falls</title>
     <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding-top: 5vh; background-color: white; color: #333; }}
-        .container {{ background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; text-align: left; }}
-        h1 {{ margin-top: 0; font-size: 1.4rem; color: #444; border-bottom: 2px solid #eeec; padding-bottom: 10px; margin-bottom: 15px; }}
-        .event-row {{ font-size: 1.25rem; color: #0056b3; margin: 12px 0; line-height: 1.4; }}
+        .container {{ background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; text-align: center; }}
+        h1 {{ margin-top: 0; font-size: 1.4rem; color: #444; border-bottom: 2px solid #eeec; padding-bottom: 10px; margin-bottom: 15px; text-align: center; }}
+        .event-row {{ font-size: 1.25rem; color: #0056b3; margin: 12px 0; line-height: 1.4; text-align: center; }}
         .event-row strong {{ color: #111; }}
         .event-row em {{ color: #555; font-style: normal; font-weight: 500; }}
     </style>

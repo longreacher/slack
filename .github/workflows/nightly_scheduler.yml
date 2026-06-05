@@ -14,7 +14,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.AUTOMATION_TOKEN }} # Uses your token to authenticate the checkout
+        token: ${{ secrets.AUTOMATION_TOKEN }} # Authenticates the initial pull/checkout
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -27,5 +27,9 @@ jobs:
     - name: Commit and Push Updated Workflow
       uses: stefanzweifel/git-auto-commit-action@v5
       with:
+        branch: main # Explicitly targets your default branch
         commit_message: "Automated Update: Scheduled tomorrow's precision slack triggers"
         file_pattern: '.github/workflows/tide_automation.yml'
+        repository: .
+      env:
+        GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }} # Crucial! Tells the git push command to use your token instead of the default bot

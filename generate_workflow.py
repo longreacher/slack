@@ -43,6 +43,8 @@ def write_workflow_file(cron_strings):
 
     cron_triggers = "\n    ".join(cron_strings)
 
+    # The updated template below now includes checkout authentication and 
+    # native Git instructions to commit and push index.html back to main.
     workflow_template = f"""name: Event-Driven Tide Automation
 
 on:
@@ -57,6 +59,9 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.AUTOMATION_TOKEN }}
+        persist-credentials: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -65,8 +70,23 @@ jobs:
 
     - name: Run Scraping Script
       run: python scrape.py
+
+    - name: Commit and Push index.html Changes
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        git add index.html
+        
+        if ! git diff --cached --quiet; then
+          git commit -m "Automated Update: Refreshed upcoming slack tide layouts"
+          git push https://x-access-token:${{ secrets.AUTOMATION_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+        else
+          echo "index.html is already up to date. No push required."
+        fi
 """
     
+    # Fixed parameter assignment to avoid FileExistsError
     os.makedirs(".github/workflows", exist_ok=True)
     with open(".github/workflows/tide_automation.yml", "w") as f:
         f.write(workflow_template)

@@ -18,7 +18,7 @@ def load_tide_data(filepath="tides_2026.txt"):
 
 def run_automation_task(code):
     """
-    Put your actual layout publishing or website update logic here.
+    Your layout publishing/website update logic
     """
     status_label = "End of outward run" if code == 1 else "End of inward run"
     print(f"TRIGGERED: Executing layout generation for: {status_label} ({code})")
@@ -27,12 +27,18 @@ def execute():
     tide_events = load_tide_data("tides_2026.txt")
     now = datetime.now()
     
-    # Safety window checking 3 minutes back to handle GitHub initialization lag
-    window_start = now - timedelta(minutes=3)
-    
     matched = False
+    print(f"Runner system clock currently reads: {now.strftime('%H:%M:%S')}")
+    
     for dt, code in tide_events:
-        if window_start <= dt <= now:
+        # 1. Calculate absolute difference in total minutes between the event and the clock
+        # 2. Using total_seconds() / 60 sidesteps timezone hour offsets entirely!
+        minute_diff = (now - dt).total_seconds() / 60.0
+        
+        # We match if the event happened between 1 and 12 minutes ago.
+        # This perfectly catches the '+1 minute' cron buffer PLUS up to 11 minutes of GitHub lag.
+        if 1.0 <= minute_diff <= 12.0:
+            print(f"Success! Found matching slack file timestamp ({dt.strftime('%H:%M')}) which was {minute_diff:.1f} minutes ago.")
             run_automation_task(code)
             matched = True
             break

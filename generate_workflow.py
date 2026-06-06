@@ -67,7 +67,7 @@ jobs:
       run: python scrape.py
 """
     
-    os.makedirs(".github/workflows", True)
+    os.makedirs(".github/workflows", exist_ok=True)
     with open(".github/workflows/tide_automation.yml", "w") as f:
         f.write(workflow_template)
     print("Successfully generated updated tide_automation.yml file.")

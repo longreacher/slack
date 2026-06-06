@@ -67,6 +67,7 @@ def run_automation_task(event_1, event_2):
             padding: 20px;
             background-color: #ffffff;
             color: #333333;
+            text-align: center;
         }}
         h1 {{
             font-size: 1.5rem;

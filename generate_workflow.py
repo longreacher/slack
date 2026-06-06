@@ -45,7 +45,7 @@ def write_workflow_file(cron_strings):
 
     # The updated template below now includes checkout authentication and 
     # native Git instructions to commit and push index.html back to main.
-    workflow_template = f"""name: Event-Driven Tide Automation
+  workflow_template = f"""name: Event-Driven Tide Automation
 
 on:
   schedule:
@@ -60,7 +60,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.AUTOMATION_TOKEN }}
+        token: ${{{{ secrets.AUTOMATION_TOKEN }}}}
         persist-credentials: false
 
     - name: Set up Python
@@ -80,7 +80,7 @@ jobs:
         
         if ! git diff --cached --quiet; then
           git commit -m "Automated Update: Refreshed upcoming slack tide layouts"
-          git push https://x-access-token:${{ secrets.AUTOMATION_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          git push https://x-access-token:${{{{ secrets.AUTOMATION_TOKEN }}}}@github.com/${{{{ github.repository }}}}.git HEAD:main
         else
           echo "index.html is already up to date. No push required."
         fi

@@ -26,16 +26,15 @@ def run_automation_task(code):
 def execute():
     tide_events = load_tide_data("tides_2026.txt")
     
-    # 1. Get the current raw UTC time from the GitHub Runner clock
-    github_utc_now = datetime.utcnow() 
+    # Clean, modern approach using timezone-aware UTC objects
+    from datetime import timezone
+    github_utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
     
-    # 2. Convert it to Atlantic Daylight Time (ADT is UTC - 3 hours)
-    # This aligns the runner perfectly with the timezone in tides_2026.txt
+    # Convert to Atlantic Time (UTC - 3 hours)
     now_atlantic = github_utc_now - timedelta(hours=3)
     
     print(f"GitHub Runner clock (UTC):   {github_utc_now.strftime('%Y-%m-%d %I:%M:%S %p')}")
-    print(f"Converted to Atlantic Time:  {now_atlantic.strftime('%Y-%m-%d %I:%M:%S %p')}")
-    
+    print(f"Converted to Atlantic Time:  {now_atlantic.strftime('%Y-%m-%d %I:%M:%S %p')}")    
     matched = False
     for dt, code in tide_events:
         # Calculate exactly how many minutes ago the slack tide happened 

@@ -1,10 +1,11 @@
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 def load_tide_data(filepath="tides_2026.txt"):
     tide_events = []
     if not os.path.exists(filepath):
+        print(f"Error: {filepath} not found.")
         return tide_events
     with open(filepath, "r") as f:
         for line in f:
@@ -16,41 +17,48 @@ def load_tide_data(filepath="tides_2026.txt"):
             except ValueError: continue
     return tide_events
 
-def run_automation_task(code):
+def run_automation_task(event_1, event_2):
     """
-    Your actual layout publishing or website update logic goes here.
+    Your actual layout generation/website update logic goes here.
+    It now receives BOTH upcoming events as tuples: (datetime, code)
     """
-    status_label = "End of outward run" if code == 1 else "End of inward run"
-    print(f"TRIGGERED: Executing layout generation for: {status_label} ({code})")
+    dt1, code1 = event_1
+    dt2, code2 = event_2
+    
+    label1 = "End of outward run" if code1 == 1 else "End of inward run"
+    label2 = "End of outward run" if code2 == 1 else "End of inward run"
+    
+    print("\n--- PULLING NEXT TWO SLACK TIDES ---")
+    print(f"1st Upcoming: {dt1.strftime('%Y-%m-%d %I:%M %p')} -> {label1} ({code1})")
+    print(f"2nd Upcoming: {dt2.strftime('%Y-%m-%d %I:%M %p')} -> {label2} ({code2})")
+    print("------------------------------------\n")
+    
+    # Put your dashboard/file updating code here using dt1, code1, dt2, code2
 
 def execute():
     tide_events = load_tide_data("tides_2026.txt")
     
-    # Clean, modern approach using timezone-aware UTC objects
-    from datetime import timezone
+    # Get the current time and align it to Atlantic Time (UTC - 3)
     github_utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
-    
-    # Convert to Atlantic Time (UTC - 3 hours)
     now_atlantic = github_utc_now - timedelta(hours=3)
     
-    print(f"GitHub Runner clock (UTC):   {github_utc_now.strftime('%Y-%m-%d %I:%M:%S %p')}")
-    print(f"Converted to Atlantic Time:  {now_atlantic.strftime('%Y-%m-%d %I:%M:%S %p')}")    
-    matched = False
+    print(f"Current Local Atlantic Time: {now_atlantic.strftime('%Y-%m-%d %I:%M:%S %p')}")
+    
+    upcoming_events = []
+    
+    # Scan the file for events that are in the future relative to right now
     for dt, code in tide_events:
-        # Calculate exactly how many minutes ago the slack tide happened 
-        # relative to our newly corrected Atlantic clock
-        minute_diff = (now_atlantic - dt).total_seconds() / 60.0
+        if dt > now_atlantic:
+            upcoming_events.append((dt, code))
         
-        # Match if the event occurred between 1 and 15 minutes ago 
-        # (This easily absorbs any heavy GitHub startup delays)
-        if 1.0 <= minute_diff <= 15.0:
-            print(f"Success! Found matching slack file timestamp ({dt.strftime('%I:%M %p')}) which was {minute_diff:.1f} minutes ago.")
-            run_automation_task(code)
-            matched = True
+        # Stop scanning once we have grabbed the next two
+        if len(upcoming_events) == 2:
             break
             
-    if not matched:
-        print("No direct slack time match found in the current minute window.")
+    if len(upcoming_events) == 2:
+        run_automation_task(upcoming_events[0], upcoming_events[1])
+    else:
+        print(f"Could not find two upcoming events. Found: {len(upcoming_events)}")
 
 if __name__ == "__main__":
     execute()

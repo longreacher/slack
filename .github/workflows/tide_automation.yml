@@ -2,12 +2,12 @@ name: Event-Driven Tide Automation
 
 on:
   schedule:
-    # Automatically scheduled target times for tomorrow:
-    - cron: '41 2 * * *'
-    - cron: '36 8 * * *'
-    - cron: '6 15 * * *'
-    - cron: '0 21 * * *'
-  workflow_dispatch: # Allows manual testing via the GitHub Actions dashboard
+    # Automatically scheduled target UTC times for tomorrow:
+    - cron: '32 6 * * *'
+    - cron: '29 12 * * *'
+    - cron: '0 19 * * *'
+    - cron: '53 0 * * *'
+  workflow_dispatch:
 
 jobs:
   execute_automation:

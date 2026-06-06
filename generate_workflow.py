@@ -1,6 +1,48 @@
 import os
 from datetime import datetime, date, timedelta
 
+# Moving the template to the top level prevents all IndentationErrors
+WORKFLOW_TEMPLATE = """name: Event-Driven Tide Automation
+
+on:
+  schedule:
+    # Automatically scheduled target UTC times for tomorrow:
+    {cron_triggers}
+  workflow_dispatch:
+
+jobs:
+  execute_automation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{{{ secrets.AUTOMATION_TOKEN }}}}
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run Scraping Script
+      run: python scrape.py
+
+    - name: Commit and Push index.html Changes
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        git add index.html
+        
+        if ! git diff --cached --quiet; then
+          git commit -m "Automated Update: Refreshed upcoming slack tide layouts"
+          git push https://x-access-token:${{{{ secrets.AUTOMATION_TOKEN }}}}@github.com/${{{{ github.repository }}}}.git HEAD:main
+        else
+          echo "index.html is already up to date. No push required."
+        fi
+"""
+
 def load_tide_data(filepath="tides_2026.txt"):
     tide_events = []
     if not os.path.exists(filepath):
@@ -43,53 +85,12 @@ def write_workflow_file(cron_strings):
 
     cron_triggers = "\n    ".join(cron_strings)
 
-    # The updated template below now includes checkout authentication and 
-    # native Git instructions to commit and push index.html back to main.
-  workflow_template = f"""name: Event-Driven Tide Automation
-
-on:
-  schedule:
-    # Automatically scheduled target UTC times for tomorrow:
-    {cron_triggers}
-  workflow_dispatch:
-
-jobs:
-  execute_automation:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        token: ${{{{ secrets.AUTOMATION_TOKEN }}}}
-        persist-credentials: false
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-
-    - name: Run Scraping Script
-      run: python scrape.py
-
-    - name: Commit and Push index.html Changes
-      run: |
-        git config --local user.name "github-actions[bot]"
-        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        
-        git add index.html
-        
-        if ! git diff --cached --quiet; then
-          git commit -m "Automated Update: Refreshed upcoming slack tide layouts"
-          git push https://x-access-token:${{{{ secrets.AUTOMATION_TOKEN }}}}@github.com/${{{{ github.repository }}}}.git HEAD:main
-        else
-          echo "index.html is already up to date. No push required."
-        fi
-"""
+    # Clean format injection away from function indents
+    workflow_content = WORKFLOW_TEMPLATE.format(cron_triggers=cron_triggers)
     
-    # Fixed parameter assignment to avoid FileExistsError
     os.makedirs(".github/workflows", exist_ok=True)
     with open(".github/workflows/tide_automation.yml", "w") as f:
-        f.write(workflow_template)
+        f.write(workflow_content)
     print("Successfully generated updated tide_automation.yml file.")
 
 if __name__ == "__main__":

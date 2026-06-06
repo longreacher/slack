@@ -18,19 +18,19 @@ def load_tide_data(filepath="tides_2026.txt"):
     return tide_events
 
 def generate_cron_strings(tide_events):
-    # Target "tomorrow" relative to when the midnight script runs
     tomorrow = date.today() + timedelta(days=1)
     cron_list = []
     
     for dt, _ in tide_events:
         if dt.date() == tomorrow:
-            # Calculate Slack Time + 1 Minute
-            trigger_time = dt + timedelta(minutes=1)
-            # GitHub Actions cron schedules use UTC time.
-            # Convert local time to UTC depending on your system/server setup if needed, 
-            # otherwise standard UTC components are pulled here:
-            minute = trigger_time.minute
-            hour = trigger_time.hour
+            # 1. Target Slack Time + 1 Minute
+            local_trigger_time = dt + timedelta(minutes=1)
+            
+            # 2. Convert Local Atlantic Time to GitHub UTC (Add 3 hours for ADT)
+            utc_trigger_time = local_trigger_time + timedelta(hours=3)
+            
+            minute = utc_trigger_time.minute
+            hour = utc_trigger_time.hour
             
             # Formats to standard GitHub Cron: 'minute hour * * *'
             cron_list.append(f"- cron: '{minute} {hour} * * *'")
@@ -38,9 +38,8 @@ def generate_cron_strings(tide_events):
     return cron_list
 
 def write_workflow_file(cron_strings):
-    # Fallback to a safe default if no tides are found to keep the yaml valid
     if not cron_strings:
-        cron_strings = ["- cron: '0 0 * * *'"] # Safe fallback run at midnight
+        cron_strings = ["- cron: '0 0 * * *'"] # Fallback
 
     cron_triggers = "\n    ".join(cron_strings)
 
@@ -48,9 +47,9 @@ def write_workflow_file(cron_strings):
 
 on:
   schedule:
-    # Automatically scheduled target times for tomorrow:
+    # Automatically scheduled target UTC times for tomorrow:
     {cron_triggers}
-  workflow_dispatch: # Allows manual testing via the GitHub Actions dashboard
+  workflow_dispatch:
 
 jobs:
   execute_automation:
@@ -68,8 +67,7 @@ jobs:
       run: python scrape.py
 """
     
-    # Ensure the directory path exists
-    os.makedirs(".github/workflows", exist_ok=True)
+    os.makedirs(".github/workflows", True)
     with open(".github/workflows/tide_automation.yml", "w") as f:
         f.write(workflow_template)
     print("Successfully generated updated tide_automation.yml file.")

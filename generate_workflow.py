@@ -60,7 +60,7 @@ def load_tide_data(filepath="tides_2026.txt"):
     return tide_events
 
 def generate_cron_strings(tide_events):
-    tomorrow = date.today() + timedelta(days=1)
+    tomorrow = date.today()
     cron_list = []
     
     for dt, _ in tide_events:

@@ -35,15 +35,15 @@ def run_automation_task(event_1, event_2):
     def get_day_label(dt):
         if dt.date() == today_date:
             # If it's past 5 PM, "Tonight" feels more natural than "Today"
-            return "Tonight" if dt.hour >= 17 else "Today"
+            return "Tonight" if dt.hour >= 18 else "Today"
         elif dt.date() == tomorrow_date:
             return "Tomorrow"
         else:
             return dt.strftime('%A') # Fallback to day name (e.g., Sunday)
 
     # 1. Reconstruct the original labels
-    label1 = "End of outward run" if code1 == 1 else "End of inward run"
-    label2 = "End of outward run" if code2 == 1 else "End of inward run"
+    label1 = "End of outward run" if code1 == 0 else "End of inward run"
+    label2 = "End of outward run" if code2 == 0 else "End of inward run"
     
     # 2. Build the precise display strings
     line1 = f"{get_day_label(dt1)} at {dt1.strftime('%-I:%M %p')} — {label1}"

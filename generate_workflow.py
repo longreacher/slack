@@ -60,16 +60,16 @@ def load_tide_data(filepath="tides_2026.txt"):
     return tide_events
 
 def generate_cron_strings(tide_events):
-    tomorrow = date.today()
+    today = date.today()
     cron_list = []
     
     for dt, _ in tide_events:
-        if dt.date() == tomorrow:
-            # 1. Target Slack Time + 2 Minute
+        if dt.date() == today:
+            # 1. Target Slack Time + 2 Minute operational buffer (to help beat minor delays)
             local_trigger_time = dt + timedelta(minutes=2)
             
             # 2. Convert Local Atlantic Time to GitHub UTC (Add 3 hours for ADT)
-            utc_trigger_time = local_trigger_time
+            utc_trigger_time = local_trigger_time + timedelta(hours=3)
             
             minute = utc_trigger_time.minute
             hour = utc_trigger_time.hour

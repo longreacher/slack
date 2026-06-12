@@ -69,7 +69,7 @@ def generate_cron_strings(tide_events):
             local_trigger_time = dt + timedelta(minutes=2)
             
             # 2. Convert Local Atlantic Time to GitHub UTC (Add 3 hours for ADT)
-            utc_trigger_time = local_trigger_time + timedelta(hours=3)
+            utc_trigger_time = local_trigger_time + timedelta(hours=2)
             
             minute = utc_trigger_time.minute
             hour = utc_trigger_time.hour

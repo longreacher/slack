@@ -3,7 +3,7 @@ name: Nightly Tide Scheduler Creator
 on:
   schedule:
     # Runs once a day at 11:30 PM (23:30 UTC) to prepare tomorrow's triggers
-    - cron: '30 23 * * *'
+    - cron: '58 23 * * *'
   workflow_dispatch: # Allows you to manually trigger it via GitHub to test
 
 jobs:

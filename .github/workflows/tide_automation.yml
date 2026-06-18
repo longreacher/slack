@@ -3,9 +3,10 @@ name: Event-Driven Tide Automation
 on:
   schedule:
     # Automatically scheduled target UTC times for tomorrow:
-    - cron: '12 6 * * *'
-    - cron: '1 14 * * *'
-    - cron: '47 18 * * *'
+    - cron: '24 2 * * *'
+    - cron: '9 7 * * *'
+    - cron: '57 14 * * *'
+    - cron: '43 19 * * *'
   workflow_dispatch:
 
 jobs:

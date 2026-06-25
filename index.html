@@ -1,33 +1,85 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Upcoming Slack Water</title>
+    <title>Daily Slack Water Status</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 5px;
-            background-color: #ffffff;
-            color: #333333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 10px 10px;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 5px auto; /* Keeps the container tightly hugging the top */
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        h2 {
+            margin-top: 0; /* Drops browser default native title spacer */
+            margin-bottom: 5px;
+            font-size: 1.4rem;
+            color: #1a237e;
             text-align: center;
         }
-        h1 {
-            font-size: 1.5rem;
-            color: #111111;
-            margin-bottom: 5px;
+        .date-sub {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
         }
-        p {
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .event-card {
+            padding: 14px 18px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .event-time {
             font-size: 1.1rem;
-            margin: 4px 0;
+            font-weight: bold;
+            color: #212121;
+            min-width: 95px;
+        }
+        .event-label {
+            font-size: 1.05rem;
+            font-weight: bold;
+            flex-grow: 1;
+            padding-left: 5px;
         }
     </style>
 </head>
 <body>
-
-    <h1>Upcoming Slack Water at Reversing Falls</h1>
-    <p>Today at 11:53 AM — End of inward run</p>
-    <p>Tonight at 7:26 PM — End of outward run</p>
-
+    <div class="container">
+        <h2>Slack Water Stream Guide</h2>
+        <div class="date-sub">Thursday, June 25, 2026</div>
+        <div class="event-list">
+            
+            <div class="event-card" style="background-color: #ffebee; border-left: 5px solid #b71c1c;">
+                <div class="event-time">7:06 AM</div>
+                <div class="event-label" style="color: #b71c1c;">End of Outward Run</div>
+            </div>
+            
+            <div class="event-card" style="background-color: #e8f5e9; border-left: 5px solid #1b5e20;">
+                <div class="event-time">11:53 AM</div>
+                <div class="event-label" style="color: #1b5e20;">End of inward run</div>
+            </div>
+            
+            <div class="event-card" style="background-color: #ffebee; border-left: 5px solid #b71c1c;">
+                <div class="event-time">7:26 PM</div>
+                <div class="event-label" style="color: #b71c1c;">End of Outward Run</div>
+            </div>
+            
+        </div>
+    </div>
 </body>
 </html>

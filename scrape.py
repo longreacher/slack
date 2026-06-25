@@ -149,4 +149,4 @@ def generate_slack_dashboard():
     print(f"Successfully compiled stream guide using tides_2026.txt for {today}.")
 
 if __name__ == "__main__":
-    generate_dashboard()
+    generate_slack_dashboard()

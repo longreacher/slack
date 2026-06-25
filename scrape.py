@@ -135,7 +135,7 @@ def generate_slack_dashboard():
 <body>
     <div class="container">
         <h2>Slack Water @ Reversing Falls</h2>
-        <div class="date-sub">{today.strftime('%A, %B %d, %Y')}</div>
+        <div class="date-sub">{today.strftime('%A, %B %d')}</div>
         <div class="event-list">
             {events_html}
         </div>

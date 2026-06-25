@@ -89,9 +89,9 @@ def generate_slack_dashboard():
             max-width: 500px;
             margin: 5px auto; /* Keeps the container tightly hugging the top */
             background: #ffffff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            padding: 5px;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         }}
         h2 {{
             margin-top: 0; /* Drops browser default native title spacer */
@@ -103,7 +103,7 @@ def generate_slack_dashboard():
         .date-sub {{
             font-size: 1rem;
             color: #666;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             text-align: center;
         }}
         .event-list {{
@@ -112,8 +112,8 @@ def generate_slack_dashboard():
             gap: 12px;
         }}
         .event-card {{
-            padding: 14px 18px;
-            border-radius: 8px;
+            padding: 7px 9px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);

@@ -1,125 +1,159 @@
 import os
-import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date
 
-def load_tide_data(filepath="tides_2026.txt"):
-    tide_events = []
+def generate_slack_dashboard():
+    # Use your source data file (adjust filename if your slack data file has a unique name)
+    filepath = "Westfield Tides.txt"
     if not os.path.exists(filepath):
         print(f"Error: {filepath} not found.")
-        return tide_events
+        return
+
+    # Target today's calendar date
+    today = date.today()
+    slack_events = []
+
+    # Read and extract today's milestones
     with open(filepath, "r") as f:
         for line in f:
             line = line.strip()
-            if not line: continue
+            if not line or line.startswith("#"):
+                continue
+                
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+                
+            datetime_str = parts[0].strip()   # e.g., "2026-06-25 08:42"
+            height_val = float(parts[1].strip()) # e.g., 0.85
+            state = parts[2].strip().upper()  # e.g., "HIGHTIDE" or "LOWTIDE"
+            
             try:
-                datetime_str, code_str = line.split()
-                tide_events.append((datetime.fromisoformat(datetime_str), int(code_str)))
-            except ValueError: continue
-    return tide_events
+                dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+            except ValueError:
+                continue
 
-def run_automation_task(event_1, event_2):
-    """
-    Generates index.html with the original clean layout and wording.
-    """
-    dt1, code1 = event_1
-    dt2, code2 = event_2
-    
-    # Get current date in Atlantic time to compare for "Tonight" vs "Tomorrow"
-    from datetime import datetime, timezone, timedelta
-    github_utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
-    now_atlantic = github_utc_now - timedelta(hours=3)
-    today_date = now_atlantic.date()
-    tomorrow_date = today_date + timedelta(days=1)
-    
-    # Helper to format the time prefix (Today/Tonight/Tomorrow/Date)
-    def get_day_label(dt):
-        if dt.date() == today_date:
-            # If it's past 5 PM, "Tonight" feels more natural than "Today"
-            return "Tonight" if dt.hour >= 18 else "Today"
-        elif dt.date() == tomorrow_date:
-            return "Tomorrow"
-        else:
-            return dt.strftime('%A') # Fallback to day name (e.g., Sunday)
+            # Isolate today's specific 24-hour window
+            if dt.date() == today:
+                # Map the states to your custom stream direction definitions
+                if "HIGH" in state:
+                    display_label = "End of inward run"
+                    text_color = "#1b5e20"  # Deep Forest Green
+                    bg_color = "#e8f5e9"
+                elif "LOW" in state:
+                    display_label = "End of Outward Run"
+                    text_color = "#b71c1c"  # Deep Nautical Red
+                    bg_color = "#ffebee"
+                else:
+                    continue  # Skip raw transitional points like 'FALLING' or 'RISING'
 
-    # 1. Reconstruct the original labels
-    label1 = "End of outward run" if code1 == 0 else "End of inward run"
-    label2 = "End of outward run" if code2 == 0 else "End of inward run"
-    
-    # 2. Build the precise display strings
-    line1 = f"{get_day_label(dt1)} at {dt1.strftime('%-I:%M %p')} — {label1}"
-    line2 = f"{get_day_label(dt2)} at {dt2.strftime('%-I:%M %p')} — {label2}"
-    
-    print("\n--- REWRITING INDEX.HTML WITH ORIGINAL FORMAT ---")
-    print(line1)
-    print(line2)
-    print("-------------------------------------------------\n")
-    
-    # 3. Write out the clean HTML template matching your dashboard's style
+                slack_events.append({
+                    "time": dt.strftime("%I:%M %p").lstrip("0"),
+                    "label": display_label,
+                    "height": f"{height_val:.2f}m",
+                    "text_color": text_color,
+                    "bg_color": bg_color
+                })
+
+    # Sort sequentially by time just in case your dataset rows are out of order
+    slack_events.sort(key=lambda x: datetime.strptime(x["time"], "%I:%M %p") if ":" in x["time"] else x["time"])
+
+    # Generate HTML list items dynamically
+    events_html = ""
+    if slack_events:
+        for event in slack_events:
+            events_html += f"""
+            <div class="event-card" style="background-color: {event['bg_color']}; border-left: 5px solid {event['text_color']};">
+                <div class="event-time">{event['time']}</div>
+                <div class="event-label" style="color: {event['text_color']};">{event['label']}</div>
+                <div class="event-height">Height: {event['height']}</div>
+            </div>
+            """
+    else:
+        events_html = "<p style='color:#666; font-style:italic;'>No slack water events recorded for today.</p>"
+
+    # Build the tight layout with reduced top whitespace
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
-    <title>Upcoming Slack Water</title>
+    <title>Daily Slack Water Status</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 5px;
-            background-color: #ffffff;
-            color: #333333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 10px 10px; /* Tight top padding */
+            background-color: #f4f6f9;
+            color: #333;
+        }}
+        .container {{
+            max-width: 500px;
+            margin: 5px auto; /* Minimal gap at top of browser */
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
             text-align: center;
         }}
-        h1 {{
-            font-size: 1.5rem;
-            color: #111111;
+        h2 {{
+            margin-top: 0; /* Erases default browser header spacing */
             margin-bottom: 5px;
+            font-size: 1.4rem;
+            color: #1a237e;
         }}
-        p {{
+        .date-sub {{
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 20px;
+        }}
+        .event-list {{
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }}
+        .event-card {{
+            padding: 14px 18px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }}
+        .event-time {{
             font-size: 1.1rem;
-            margin: 4px 0;
+            weight: 700;
+            font-weight: bold;
+            color: #212121;
+            min-width: 85px;
+        }}
+        .event-label {{
+            font-size: 1.05rem;
+            font-weight: bold;
+            flex-grow: 1;
+            padding-left: 10px;
+        }}
+        .event-height {{
+            font-size: 0.9rem;
+            color: #555;
+            text-align: right;
         }}
     </style>
 </head>
 <body>
-
-    <h1>Upcoming Slack Water at Reversing Falls</h1>
-    <p>{line1}</p>
-    <p>{line2}</p>
-
+    <div class="container">
+        <h2>Slack Water Stream Guide</h2>
+        <div class="date-sub">{today.strftime('%A, %B %d, %Y')}</div>
+        <div class="event-list">
+            {events_html}
+        </div>
+    </div>
 </body>
 </html>
 """
 
     with open("index.html", "w") as f:
         f.write(html_content)
-        
-    print("Successfully restored index.html to the original 3 PM layout style.")
-    
-def execute():
-    tide_events = load_tide_data("tides_2026.txt")
-    
-    # Get the current time and align it to Atlantic Time (UTC - 3)
-    from datetime import timezone
-    github_utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
-    now_atlantic = github_utc_now - timedelta(hours=3)
-    
-    print(f"Current Local Atlantic Time: {now_atlantic.strftime('%Y-%m-%d %I:%M:%S %p')}")
-    
-    upcoming_events = []
-    
-    # Scan the file for events that are in the future relative to right now
-    for dt, code in tide_events:
-        if dt > now_atlantic:
-            upcoming_events.append((dt, code))
-        
-        # Stop scanning once we have grabbed the next two
-        if len(upcoming_events) == 2:
-            break
-            
-    if len(upcoming_events) == 2:
-        run_automation_task(upcoming_events[0], upcoming_events[1])
-    else:
-        print(f"Could not find two upcoming events. Found: {len(upcoming_events)}")
+    print(f"Successfully compiled static stream guide for {today}.")
 
 if __name__ == "__main__":
-    execute()
+    generate_slack_dashboard()

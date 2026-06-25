@@ -81,7 +81,7 @@ def generate_slack_dashboard():
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            padding: 10px 10px;
+            padding: 5px 5px;
             background-color: #f4f6f9;
             color: #333;
         }}
@@ -134,7 +134,7 @@ def generate_slack_dashboard():
 </head>
 <body>
     <div class="container">
-        <h2>Slack Water Stream Guide</h2>
+        <h2>Slack Water @ Reversing Falls</h2>
         <div class="date-sub">{today.strftime('%A, %B %d, %Y')}</div>
         <div class="event-list">
             {events_html}

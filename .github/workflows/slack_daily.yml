@@ -1,0 +1,39 @@
+name: Daily Slack Water Dashboard Automation
+
+on:
+  schedule:
+    # Runs once every night at 03:05 UTC (12:05 AM Atlantic Time)
+    - cron: '5 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  execute_automation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.AUTOMATION_TOKEN }}
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run Slack Parsing Script
+      run: python scrape.py
+
+    - name: Commit and Push index.html Changes
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        
+        git add index.html
+        
+        if ! git diff --cached --quiet; then
+          git commit -m "Automated Update: Daily slack water times generated"
+          git push https://x-access-token:${{ secrets.AUTOMATION_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+        else
+          echo "index.html is already up to date. No push required."
+        fi

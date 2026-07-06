@@ -35,9 +35,8 @@ jobs:
         
         if ! git diff --cached --quiet; then
           git commit -m "Automated Update: Daily dashboard refreshed"
-          # Explicitly embedding the environment variable into the remote URL to bypass prompt blocks
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git push origin HEAD:main
+          # Pushing directly to the authenticated URL string in one shot bypasses the remote config block
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main
         else
           echo "index.html is already up to date. No push required."
         fi

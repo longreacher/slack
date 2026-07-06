@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.AUTOMATION_TOKEN }}
-        persist-credentials: false
+        persist-credentials: true # Keep the token credentials active for the environment
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -25,8 +25,6 @@ jobs:
       run: python scrape.py
 
     - name: Commit and Push index.html Changes
-      env:
-        GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -35,8 +33,8 @@ jobs:
         
         if ! git diff --cached --quiet; then
           git commit -m "Automated Update: Daily dashboard refreshed"
-          # Pushing directly to the authenticated URL string in one shot bypasses the remote config block
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main
+          # Simple native push utilizes the active checkout token instantly without throwing 128 errors
+          git push origin HEAD:main
         else
           echo "index.html is already up to date. No push required."
         fi

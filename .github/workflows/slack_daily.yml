@@ -25,6 +25,8 @@ jobs:
       run: python scrape.py
 
     - name: Commit and Push index.html Changes
+      env:
+        GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
       run: |
         git config --local user.name "github-actions[bot]"
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -32,8 +34,10 @@ jobs:
         git add index.html
         
         if ! git diff --cached --quiet; then
-          git commit -m "Automated Update: Daily slack water times generated"
-          git push https://x-access-token:${{ secrets.AUTOMATION_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          git commit -m "Automated Update: Daily dashboard refreshed"
+          # Explicitly embedding the environment variable into the remote URL to bypass prompt blocks
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git push origin HEAD:main
         else
           echo "index.html is already up to date. No push required."
         fi
